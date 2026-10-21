@@ -1,0 +1,57 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "payments.dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "payments.new",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "payments.failed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "payments.dlx",
+      "vhost": "/",
+      "destination": "payments.failed",
+      "destination_type": "queue",
+      "routing_key": "payments.failed",
+      "arguments": {}
+    }
+  ],
+  "policies": [
+    {
+      "name": "payments-dlx-policy",
+      "vhost": "/",
+      "pattern": "^payments\\.new$",
+      "apply-to": "queues",
+      "definition": {
+        "dead-letter-exchange": "payments.dlx",
+        "dead-letter-routing-key": "payments.failed"
+      },
+      "priority": 10
+    }
+  ]
+}

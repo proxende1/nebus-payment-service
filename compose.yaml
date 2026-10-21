@@ -1,0 +1,153 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL}
+      RABBITMQ_URL: ${DOCKER_RABBITMQ_URL}
+      API_KEY: ${API_KEY}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-init:
+        condition: service_completed_successfully
+
+  consumer:
+    build: .
+    restart: unless-stopped
+
+    command:
+      - faststream
+      - run
+      - app.messaging.consumer:app
+
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL}
+      RABBITMQ_URL: ${DOCKER_RABBITMQ_URL}
+      PYTHONUNBUFFERED: "1"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-init:
+        condition: service_completed_successfully
+
+  publisher:
+    build: .
+    restart: unless-stopped
+
+    command:
+      - python
+      - -m
+      - app.messaging.outbox_publisher
+
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL}
+      RABBITMQ_URL: ${DOCKER_RABBITMQ_URL}
+      PYTHONUNBUFFERED: "1"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-init:
+        condition: service_completed_successfully
+
+  webhook-worker:
+    build: .
+    command: python -m app.services.webhook_worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL}
+      RABBITMQ_URL: ${DOCKER_RABBITMQ_URL}
+      PYTHONUNBUFFERED: "1"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rabbitmq-init:
+    image: curlimages/curl:8.12.1
+    restart: "no"
+
+    entrypoint: ["sh", "-ec"]
+    command:
+      - |
+        curl --fail --show-error --silent \
+          --retry 10 --retry-delay 2 --retry-connrefused \
+          --user "$$RABBITMQ_DEFAULT_USER:$$RABBITMQ_DEFAULT_PASS" \
+          --header "Content-Type: application/json" \
+          --request POST \
+          --data-binary @/etc/rabbitmq/definitions.json \
+          http://rabbitmq:15672/api/definitions
+        echo "RabbitMQ definitions imported"
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+    volumes:
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  rabbitmq:
+    hostname: nebus-rabbitmq
+    image: rabbitmq:3-management
+    container_name: nebus_rabbitmq
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    container_name: nebus_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+    - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nebus -d payments_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

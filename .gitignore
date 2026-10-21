@@ -1,0 +1,30 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+# Local backups
+backups/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# Local files
+*.log
+.DS_Store
+
+# Environment overrides
+.env.*
+!.env.example
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+# Local clean-start testing
+compose.clean.yaml

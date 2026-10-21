@@ -1,0 +1,31 @@
+.venv/
+.env
+.git/
+.gitignore
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+.vscode/
+.idea/
+
+*.log
+.DS_Store
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+
+# Local backups
+backups/
+
+# Local environment overrides
+.env.*
+!.env.example
+
+# Build and test artifacts
+.coverage
+htmlcov/
