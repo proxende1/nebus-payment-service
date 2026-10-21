@@ -28,3 +28,7 @@ htmlcov/
 *.suo
 # Local clean-start testing
 compose.clean.yaml
+
+# Local review archives
+nebus-review.zip
+nebus-final-review.zip
