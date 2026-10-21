@@ -52,10 +52,17 @@ async def main():
 
     try:
         while True:
-            count = await publish_pending_events()
+            try:
+                count = await publish_pending_events()
 
-            if count > 0:
-                print(f"Published {count} outbox event(s)")
+                if count > 0:
+                    print(f"Published {count} outbox event(s)")
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as exc:
+                print(f"Outbox publication failed: {exc!r}")
 
             await asyncio.sleep(POLL_INTERVAL)
 

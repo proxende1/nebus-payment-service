@@ -10,6 +10,7 @@ services:
       DATABASE_URL: ${DOCKER_DATABASE_URL}
       RABBITMQ_URL: ${DOCKER_RABBITMQ_URL}
       API_KEY: ${API_KEY}
+      WEBHOOK_ALLOWED_HOSTS: ${WEBHOOK_ALLOWED_HOSTS}
 
     depends_on:
       postgres:

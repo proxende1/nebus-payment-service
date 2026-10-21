@@ -16,6 +16,10 @@ async def process_payment(
     payment_id: UUID,
 ) -> Payment | None:
 
+    # Эмулируем обработку до захвата блокировки БД.
+    delay = random.uniform(2, 5)
+    await asyncio.sleep(delay)
+
     statement = (
         select(Payment)
         .where(Payment.id == payment_id)
@@ -26,13 +30,14 @@ async def process_payment(
     payment = result.scalar_one_or_none()
 
     if payment is None:
+        await session.rollback()
         return None
 
+    # Повторная проверка под блокировкой защищает
+    # от двойного изменения статуса платежа.
     if payment.status != PaymentStatus.PENDING:
+        await session.commit()
         return payment
-
-    delay = random.uniform(2, 5)
-    await asyncio.sleep(delay)
 
     is_successful = random.random() < 0.9
 
