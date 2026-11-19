@@ -1,5 +1,7 @@
 # Nebus Payment Service
 
+![Python](https://img.shields.io/badge/python-3.12-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?logo=rabbitmq&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+
 Асинхронный сервис обработки платежей на FastAPI, PostgreSQL и RabbitMQ.
 
 ## Технологии
@@ -17,12 +19,12 @@
 
 Сервис состоит из нескольких компонентов:
 
-- **API** — принимает запросы на создание платежей и получение их статуса.
-- **PostgreSQL** — хранит платежи, их статусы и служебные данные.
-- **Outbox Publisher** — публикует события из базы данных в RabbitMQ.
-- **Payment Consumer** — асинхронно обрабатывает платежи и обновляет их статусы.
-- **Webhook Worker** — отправляет уведомления о результатах обработки.
-- **RabbitMQ** — обеспечивает обмен сообщениями между компонентами.
+- **API** - принимает запросы на создание платежей и получение их статуса.
+- **PostgreSQL** - хранит платежи, их статусы и служебные данные.
+- **Outbox Publisher** - публикует события из базы данных в RabbitMQ.
+- **Payment Consumer** - асинхронно обрабатывает платежи и обновляет их статусы.
+- **Webhook Worker** - отправляет уведомления о результатах обработки.
+- **RabbitMQ** - обеспечивает обмен сообщениями между компонентами.
 
 ## Возможности
 
@@ -49,8 +51,16 @@
 
 Скопируйте пример конфигурации:
 
+PowerShell (Windows):
+
 ```powershell
 Copy-Item .env.example .env
+```
+
+bash (Linux / macOS):
+
+```bash
+cp .env.example .env
 ```
 
 Замените значения `change_me` и `replace_with_your_api_key` в файле `.env` на собственные.
@@ -65,9 +75,19 @@ docker compose up -d postgres rabbitmq rabbitmq-init
 
 ### 3. Установка зависимостей
 
+PowerShell (Windows):
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+bash (Linux / macOS):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
@@ -97,7 +117,7 @@ docker compose ps -a
 
 PostgreSQL и RabbitMQ должны иметь статус `healthy`.
 
-Сервис `rabbitmq-init` выполняется однократно и может иметь статус `Exited (0)` — это нормально.
+Сервис `rabbitmq-init` выполняется однократно и может иметь статус `Exited (0)` - это нормально.
 
 ## API
 
@@ -116,14 +136,20 @@ Invoke-RestMethod `
     -Headers $headers
 ```
 
+bash (curl):
+
+```bash
+curl -H "X-API-Key: replace_with_your_api_key" http://localhost:8000/health
+```
+
 ### Создание платежа
 
 **POST** `/api/v1/payments`
 
 Для создания платежа необходимы заголовки:
 
-- `X-API-Key` — ключ доступа к API.
-- `Idempotency-Key` — уникальный ключ запроса, предотвращающий повторное создание платежа при повторной отправке.
+- `X-API-Key` - ключ доступа к API.
+- `Idempotency-Key` - уникальный ключ запроса, предотвращающий повторное создание платежа при повторной отправке.
 
 Пример для PowerShell:
 
@@ -148,6 +174,16 @@ Invoke-RestMethod `
     -Headers $headers `
     -ContentType "application/json" `
     -Body $body
+```
+
+Пример для bash (curl):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/payments \
+  -H "X-API-Key: replace_with_your_api_key" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "1500.50", "currency": "RUB", "description": "Test payment", "metadata": {"order_id": "ORDER-001"}}'
 ```
 
 Замените `replace_with_your_api_key` на значение `API_KEY` из `.env`.
@@ -179,15 +215,22 @@ Invoke-RestMethod `
     -Headers $headers
 ```
 
-Замените `replace_with_payment_uuid` на идентификатор, полученный после создания платежа, а `replace_with_your_api_key` — на значение `API_KEY` из `.env`.
+Пример для bash (curl):
+
+```bash
+curl -H "X-API-Key: replace_with_your_api_key" \
+  http://localhost:8000/api/v1/payments/replace_with_payment_uuid
+```
+
+Замените `replace_with_payment_uuid` на идентификатор, полученный после создания платежа, а `replace_with_your_api_key` - на значение `API_KEY` из `.env`.
 
 При успешном запросе API возвращает HTTP `200 OK`.
 
 Возможные статусы платежа:
 
-- `pending` — платёж ожидает завершения обработки.
-- `succeeded` — платёж успешно обработан.
-- `failed` — обработка платежа завершилась неудачей.
+- `pending` - платёж ожидает завершения обработки.
+- `succeeded` - платёж успешно обработан.
+- `failed` - обработка платежа завершилась неудачей.
 
 Обработка выполняется асинхронно, поэтому статус может измениться спустя несколько секунд после создания платежа.
 
@@ -207,9 +250,9 @@ Payment Consumer получает сообщения из RabbitMQ и запус
 
 При технической ошибке выполняется до трёх попыток обработки:
 
-- Первая попытка — сразу.
-- Вторая попытка — после задержки 2 секунды.
-- Третья попытка — после задержки 4 секунды.
+- Первая попытка - сразу.
+- Вторая попытка - после задержки 2 секунды.
+- Третья попытка - после задержки 4 секунды.
 
 После исчерпания попыток Consumer отклоняет сообщение.
 
@@ -236,9 +279,9 @@ Worker проверяет ожидающие доставки задачи ка�
 
 Возможные статусы доставки:
 
-- `pending` — ожидает отправки или повторной попытки.
-- `delivered` — уведомление успешно доставлено.
-- `failed` — доставка завершилась ошибкой.
+- `pending` - ожидает отправки или повторной попытки.
+- `delivered` - уведомление успешно доставлено.
+- `failed` - доставка завершилась ошибкой.
 
 Некорректные webhook-адреса отклоняются без повторных попыток.
 
